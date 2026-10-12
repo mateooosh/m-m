@@ -408,8 +408,6 @@ fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: colu
   aspect-ratio: 4 / 5;
   max-width: 100%;
   border: 1px solid #E3CDAF;
-  outline: 1px solid var(--paper);
-  outline-offset: -8px;
   overflow: hidden;
   display: flex; align-items: center; justify-content: center;
   color: var(--muted);
@@ -443,6 +441,8 @@ button.photo:hover img { transform: scale(1.04); }
   cursor: pointer;
 }
 .lightbox .lb-close { top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px; }
+.lightbox .lb-download { top: calc(16px + env(safe-area-inset-top, 0px)); right: 76px; }
+.lightbox .lb-download:hover { color: var(--paper); background: rgba(207, 174, 110, .35); }
 .lightbox .lb-prev { left: 16px; top: 50%; transform: translateY(-50%); }
 .lightbox .lb-next { right: 16px; top: 50%; transform: translateY(-50%); }
 .lightbox .lb-count { position: absolute; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); left: 0; right: 0; text-align: center; color: var(--paper); font-size: 13px; letter-spacing: .2em; }
@@ -701,6 +701,9 @@ button.photo:hover img { transform: scale(1.04); }
 
 <dialog class="lightbox" id="lightbox" aria-label="Podgląd zdjęcia">
   <img id="lb-img" alt="Zdjęcie z wesela">
+  <a class="lb-btn lb-download" id="lb-download" href="#" target="_blank" rel="noopener" download aria-label="Pobierz zdjęcie" title="Pobierz zdjęcie">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+  </a>
   <button class="lb-btn lb-close" type="button" id="lb-close" aria-label="Zamknij podgląd">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
   </button>
@@ -1124,6 +1127,7 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
     lbImg.src = full(id);
     withFallback(lbImg, fullAlt(id));
     $('#lb-count').textContent = `${current + 1} / ${list.length}`;
+    $('#lb-download').href = `https://drive.google.com/uc?export=download&id=${id}`;
     if (!lb.open) lb.showModal();
   }
 
