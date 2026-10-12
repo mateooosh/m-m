@@ -652,10 +652,6 @@ fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: colu
       <h2 class="h2">Wspólna galeria</h2>
       <p class="lead" style="margin-bottom: 32px;">Robicie zdjęcia? Wrzućcie je tutaj, trafią prosto do naszego albumu. Kod QR znajdziecie też na stołach.</p>
       <form class="card upload" id="upload-form" novalidate>
-        <div class="field">
-          <label for="upload-author">Twoje imię (opcjonalnie)</label>
-          <input id="upload-author" type="text" autocomplete="name" placeholder="np. Kasia">
-        </div>
         <label class="dropzone" for="upload-files" id="dropzone">
           <strong>Wybierz zdjęcia</strong>
           <small>albo przeciągnij je tutaj · tylko zdjęcia, możesz wybrać kilka</small>
@@ -700,7 +696,7 @@ const CONFIG = {
     },
   },
   RSVP_URL: '',      // alternatywa: adres Apps Script, używany gdy formularz Google nie jest uzupełniony
-  UPLOAD_URL: '',
+  UPLOAD_URL: 'https://script.google.com/macros/s/AKfycbw2aPTL5ZoXlG_f9pSXCjCqEj7wG1r95x10j92QqEIvZRM_TXgij4hwmvX8rh9gKPWc/exec', // Apps Script: zapis zdjęć na Dysku
   WEDDING_DATE: '2027-05-29T16:00:00+02:00',
   MAX_PHOTO_SIDE: 2560,
   PHOTO_QUALITY: 0.85,
@@ -964,7 +960,6 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
   async function handleFiles(files) {
     const images = files.filter((f) => f.type.startsWith('image/') || /\.(heic|heif)$/i.test(f.name));
     if (!images.length) return;
-    const author = $('#upload-author').value.trim();
     let done = 0;
     bar.style.width = '0%';
     for (const file of images) {
@@ -979,7 +974,6 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
           name: file.name.replace(/\.\w+$/, '') + '.jpg',
           type: blob.type,
           data,
-          author,
         }));
         status.textContent = 'wysłane';
         status.className = 'ok';
@@ -1114,27 +1108,25 @@ async function postJSON(url, payload) {
 
 <!--
 =====================================================================
-GOOGLE APPS SCRIPT (script.google.com → nowy projekt), wdrożenie:
-Wdróż → Nowe wdrożenie → Aplikacja internetowa
-"Wykonuj jako: ja", "Dostęp: każdy". Adres /exec wklej do CONFIG.
+GOOGLE APPS SCRIPT do zapisu zdjęć (script.google.com).
+Wdrożenie: Aplikacja internetowa, "Wykonaj jako: Ja", "Kto ma dostęp: Każdy".
+Po zmianie kodu: Wdróż → Zarządzaj wdrożeniami → Edytuj → Nowa wersja.
 
-const SHEET_NAME = 'RSVP';               // zakładka w arkuszu powiązanym ze skryptem
-const FOLDER_ID  = 'ID_FOLDERU_NA_DYSKU'; // folder na zdjęcia
+const FOLDER_ID = 'ID_FOLDERU_NA_DYSKU';
 
 function doPost(e) {
-  const d = JSON.parse(e.postData.contents);
-  if (d.website) return json({ ok: true });            // bot
-  if (d.data) {                                          // zdjęcie
-    const blob = Utilities.newBlob(Utilities.base64Decode(d.data), d.type, d.name);
+  try {
+    const d = JSON.parse(e.postData.contents);
+    if (!d.data) return json({ ok: false, error: 'Brak pliku' });
+    const author = (d.author || '').replace(/[^\p{L}\d _-]/gu, '').slice(0, 40);
+    const stamp = Utilities.formatDate(new Date(), 'Europe/Warsaw', 'yyyy-MM-dd_HH-mm-ss');
+    const name = [stamp, author, d.name || 'zdjecie.jpg'].filter(Boolean).join('_');
+    const blob = Utilities.newBlob(Utilities.base64Decode(d.data), d.type || 'image/jpeg', name);
     const file = DriveApp.getFolderById(FOLDER_ID).createFile(blob);
-    file.setDescription(d.author || '');
     return json({ ok: true, id: file.getId() });
+  } catch (err) {
+    return json({ ok: false, error: String(err) });
   }
-  SpreadsheetApp.getActive().getSheetByName(SHEET_NAME).appendRow([   // RSVP
-    new Date(), d.name, d.attending ? 'Tak' : 'Nie', d.guests,
-    (d.companions || []).join(', '), d.notes,
-  ]);
-  return json({ ok: true });
 }
 
 function json(o) {
